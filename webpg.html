@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blood Bank Management System</title>
+    <style>
+        :root {
+            --primary-color: #c62828;
+            --secondary-color: #ffcdd2;
+        }
+
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .blood-type {
+            color: var(--primary-color);
+            font-weight: bold;
+        }
+
+        form {
+            display: grid;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        input, select {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        button {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 10px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        th, td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+    </style>
+</head>
+<body>
+    <h1>Blood Bank Management System</h1>
+    
+    <div class="dashboard">
+        <!-- Donor Registration -->
+        <div class="card">
+            <h2>New Donor Registration</h2>
+            <form id="donorForm">
+                <input type="text" id="firstName" placeholder="First Name" required>
+                <input type="text" id="lastName" placeholder="Last Name" required>
+                <select id="bloodType" required>
+                    <option value="">Select Blood Type</option>
+                    <option>A+</option>
+                    <option>A-</option>
+                    <option>B+</option>
+                    <option>B-</option>
+                    <option>AB+</option>
+                    <option>AB-</option>
+                    <option>O+</option>
+                    <option>O-</option>
+                </select>
+                <input type="tel" id="phone" placeholder="Phone Number" pattern="[0-9]{10}" required>
+                <button type="submit">Register Donor</button>
+            </form>
+        </div>
+
+        <!-- Blood Donation Entry -->
+        <div class="card">
+            <h2>Record Blood Donation</h2>
+            <form id="donationForm">
+                <input type="number" id="donorId" placeholder="Donor ID" required>
+                <select id="componentType" required>
+                    <option value="">Select Component</option>
+                    <option>Whole Blood</option>
+                    <option>Plasma</option>
+                    <option>Platelets</option>
+                    <option>Red Cells</option>
+                </select>
+                <input type="date" id="collectionDate" required>
+                <button type="submit">Record Donation</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Inventory Display -->
+    <div class="card">
+        <h2>Current Blood Inventory</h2>
+        <div id="inventoryTable"></div>
+    </div>
+
+    <script>
+        // API Base URL (Replace with your backend endpoint)
+        const API_BASE = 'http://localhost:3000/api';
+
+        // Load initial inventory
+        document.addEventListener('DOMContentLoaded', loadInventory);
+
+        // Donor Registration
+        document.getElementById('donorForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const donorData = {
+                firstName: document.getElementById('firstName').value,
+                lastName: document.getElementById('lastName').value,
+                bloodType: document.getElementById('bloodType').value,
+                phone: document.getElementById('phone').value
+            };
+
+            try {
+                const response = await fetch(`${API_BASE}/donors`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(donorData)
+                });
+
+                if (response.ok) {
+                    alert('Donor registered successfully!');
+                    e.target.reset();
+                }
+            } catch (error) {
+                console.error('Registration failed:', error);
+            }
+        });
+
+        // Record Donation
+        document.getElementById('donationForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const donationData = {
+                donorId: document.getElementById('donorId').value,
+                componentType: document.getElementById('componentType').value,
+                collectionDate: document.getElementById('collectionDate').value
+            };
+
+            try {
+                const response = await fetch(`${API_BASE}/donations`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(donationData)
+                });
+
+                if (response.ok) {
+                    alert('Donation recorded successfully!');
+                    e.target.reset();
+                    loadInventory();
+                }
+            } catch (error) {
+                console.error('Donation recording failed:', error);
+            }
+        });
+
+        // Load Inventory
+        async function loadInventory() {
+            try {
+                const response = await fetch(`${API_BASE}/inventory`);
+                const inventory = await response.json();
+                
+                const tableHtml = `
+                    <table>
+                        <tr>
+                            <th>Blood Type</th>
+                            <th>Component</th>
+                            <th>Collection Date</th>
+                            <th>Expiry Date</th>
+                            <th>Status</th>
+                        </tr>
+                        ${inventory.map(item => `
+                            <tr>
+                                <td class="blood-type">${item.blood_type}</td>
+                                <td>${item.component_type}</td>
+                                <td>${new Date(item.collection_date).toLocaleDateString()}</td>
+                                <td>${new Date(item.expiration_date).toLocaleDateString()}</td>
+                                <td>${item.status}</td>
+                            </tr>
+                        `).join('')}
+                    </table>
+                `;
+
+                document.getElementById('inventoryTable').innerHTML = tableHtml;
+            } catch (error) {
+                console.error('Failed to load inventory:', error);
+            }
+        }
+    </script>
+</body>
+</html>
+app.post('/api/donors', (req, res) => {
+});
+
+app.post('/api/donations', (req, res) => {
+});
+
+app.get('/api/inventory', (req, res) => {
+  
+});
